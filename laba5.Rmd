@@ -1,0 +1,115 @@
+---
+title: "laba5"
+author: "Popsuy-Shapko"
+date: '28 апреля 2019 г '
+output:
+  html_document:
+    self_contained: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# GDP growth (annual %)
+
+```{r, results='asis', warning=FALSE, message=FALSE}
+library('data.table')
+library('WDI')
+library('leaflet')
+# devtools::install_github('mages/googleVis')
+suppressPackageStartupMessages(library('googleVis'))
+
+indicator.code <- 'NY.GDP.MKTP.KD.ZG'
+DT <- data.table(WDI(indicator = indicator.code, start = 2017, end = 2017))
+
+fileURL <- 'https://pkgstore.datahub.io/core/country-list/data_csv/data/d7c9d7cfb42cb69f4422dec222dbbaa8/data_csv.csv'
+all.iso2.country.codes <- read.csv(fileURL, stringsAsFactors = F, 
+                                   na.strings = '.')
+
+DT <- na.omit(DT[iso2c %in% all.iso2.country.codes$Code, ])
+
+g.tbl <- gvisTable(data = DT[, -'year'],
+                   options = list(width = 300, height = 400))
+
+g.chart <- gvisGeoChart(data = DT, 
+                        locationvar = 'iso2c', 
+                        hovervar = 'country',
+                        colorvar = indicator.code, 
+                        options = list(width = 500, 
+                                       height = 400, 
+                                       dataMode = 'regions'))
+
+TG <- gvisMerge(g.tbl, g.chart,
+                horizontal = TRUE,
+                tableOptions = 'bgcolor=\"#CCCCCC\" cellspacing=10')
+TG
+```
+
+# Объекты культурного наследия в городе Буй
+
+```{r, results='asis', warning=FALSE, message=FALSE}
+library('RCurl')
+library('jsonlite')
+library('XML')
+URL.base <- 'http://data.gov.ru/api/'
+API.key <- '478ed42e085d9e21de6c2bce34d09b53'
+getOpenDataRF <- function(api.params, url.base = URL.base, api.key = API.key) {
+ par <- paste0(api.params, collapse = '/')
+ url <- paste0(url.base, par, '/?access_token=', api.key)
+ message(paste0('Загружаем', url, ' ...'))
+ fromJSON(getURL(url))
+}
+params <- c('dataset')
+datasets <- getOpenDataRF(params)
+doc <- datasets[grep('Костром', datasets$title), c('identifier', 'topic',
+ 'title')]
+doc$title <- gsub('^[ ]*', '', doc$title)
+dataset_id <- '4401168294-oknkosobl'
+params <- c('dataset', dataset_id, 'version')
+versions <- getOpenDataRF(params)
+params <- c(params, versions[nrow(versions), 1], 'content')
+doc <- getOpenDataRF(params)
+doc <- doc[grepl('^Костромская область[,] г[.] Буй', doc$Адрес), ]
+
+URL.base <- 'https://geocode-maps.yandex.ru/1.x/'
+API.key <- '5994d196-b5a9-471b-9b17-26b62ac130d1'
+getYandexMaps <- function(api.params, url.base = URL.base, api.key = API.key) {
+ par <- paste0(api.params, collapse = '&')
+ url <- paste0(url.base, '/?access_token=', api.key, par)
+ message(paste0('Загружаем ', url, ' ...'))
+
+ doc <- getURL(url)
+ rootNode <- xmlRoot(xmlTreeParse(doc, useInternalNodes = T))
+ strsplit(xpathSApply(rootNode, "//*[local-name()='pos']", xmlValue),
+ split = ' ')[[1]]
+}
+params <- paste0('&geocode=', gsub(pattern = ' ', replacement = '+',
+doc$Адрес[1]))
+getYandexMaps(params)
+coords <- sapply(as.list(doc$Адрес), function(x) {
+ params <- paste0('&geocode=', gsub(x[1], pattern = ' ',
+ replacement = '+'))
+ getYandexMaps(params)
+ })
+df.coords <- as.data.frame(t(coords))
+colnames(df.coords) <- c('long', 'lat')
+doc <- cbind(doc, df.coords)
+doc$`Координата, Х` <- NULL
+doc$`Координата, Y` <- NULL
+doc$Var.7 <- NULL
+write.csv2(doc, file = "./Booy_culture.csv", row.names = F)
+
+fileURL <- './Booy_culture.csv'
+DT.loc <- read.csv2(fileURL, stringsAsFactors = F)
+DT.loc$lat <- as.numeric(DT.loc$lat)
+DT.loc$long <- as.numeric(DT.loc$long)
+map.sites <- paste0(DT.loc$Характеристика.........................................Наименование.ОКН.с.указанием.объектов..входящих.в.его.состав..в.соответствии.с.актом.органа.государственной.власти.о.его.постановке.на.государственную.охрану., '</br>',
+ DT.loc$Характеристика...............Реквизиты.и.наименование.акта.органа.государственной.власти.о.постановкена.государственную.охрану.ОКН.., '</br>',
+ '</em>')
+myMap <- DT.loc %>% leaflet(width = 800, height = 800) %>%
+addTiles() %>% addMarkers(clusterOptions = markerClusterOptions(), popup = map.sites)
+# рисуем карту
+myMap
+
+```
