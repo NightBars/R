@@ -52,15 +52,15 @@ spplot(Regions1, 'count_2017', main = 'Численность дошкольны
 )
 
 
-# ЧИСЛО ДОШКОЛЬНЫХ ОРГАНИЗАЦИЙ, ОСУЩЕСТВЛЯЮЩИХ ОБРАЗОВАТЕЛЬНУЮ ДЕЯТЕЛЬНОСТЬ - Адыгея ----
+# ЧИСЛО ДОШКОЛЬНЫХ ОРГАНИЗАЦИЙ, ОСУЩЕСТВЛЯЮЩИХ ОБРАЗОВАТЕЛЬНУЮ ДЕЯТЕЛЬНОСТЬ - Ставропольский край ----
 gpclibPermit()
 
-stat.Regions <- read.csv2('pupil_2017_AD.csv', stringsAsFactors = F)
+stat.Regions <- read.csv2('pupil_2017_ST.csv', stringsAsFactors = F)
 
 Regions <- readOGR(dsn = './data/gadm36_RUS_shp', # папка
                    layer = 'gadm36_RUS_2') # уровень 
 Regions@data$id <- Regions@data$NAME_2
-Regions <- Regions[grepl('^RU.AD.', Regions$HASC_2), ]
+Regions <- Regions[grepl('^RU.ST.', Regions$HASC_2), ]
 Regions.points <- fortify(Regions, region = 'id')
 Regions.df <- merge(Regions.points, Regions@data, by = 'id')
 stat.Regions$id <- stat.Regions$District
@@ -85,7 +85,7 @@ gp <- ggplot() +
                        direction = 1,
                        breaks = pretty_breaks(n = 5)) +
   labs(x = 'Долгота', y = 'Широта',
-       title = "ЧИСЛО ДОШКОЛЬНЫХ ОРГАНИЗАЦИЙ, ОСУЩЕСТВЛЯЮЩИХ ОБРАЗОВАТЕЛЬНУЮ ДЕЯТЕЛЬНОСТЬ - Адыгея") +
+       title = "ЧИСЛО ДОШКОЛЬНЫХ ОРГАНИЗАЦИЙ, ОСУЩЕСТВЛЯЮЩИХ ОБРАЗОВАТЕЛЬНУЮ ДЕЯТЕЛЬНОСТЬ - Ставропольский край") +
   geom_text(data = centroids.df,
             aes(long, lat, label = id))
 gp
