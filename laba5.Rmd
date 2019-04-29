@@ -11,7 +11,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# GDP growth (annual %)
+# Рост ВВП (ежегодный %)
 
 ```{r, results='asis', warning=FALSE, message=FALSE}
 library('data.table')
